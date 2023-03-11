@@ -13,7 +13,7 @@
 
 namespace __llvm_libc {
 
-void longjmp(__jmp_buf *buf, int val);
+void longjmp(__jmp_buf *buf, int val) __NOEXCEPT;
 
 } // namespace __llvm_libc
 

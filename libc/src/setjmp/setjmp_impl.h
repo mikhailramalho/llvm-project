@@ -15,7 +15,7 @@
 
 namespace __llvm_libc {
 
-int setjmp(__jmp_buf *buf);
+int setjmp(__jmp_buf *buf) __NOEXCEPT;
 
 } // namespace __llvm_libc
 
