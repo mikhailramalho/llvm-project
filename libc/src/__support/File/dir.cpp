@@ -40,7 +40,30 @@ ErrorOr<struct ::dirent *> Dir::read() {
   if (fillsize == 0)
     return nullptr;
 
+#ifdef SYS_getdents64
   struct ::dirent *d = reinterpret_cast<struct ::dirent *>(buffer + readptr);
+#elif defined(SYS_getdents)
+  // from https://man7.org/linux/man-pages/man2/getdents.2.html, SYS_getdents
+  // returns a slightly different dirent struct:
+  struct linux_dirent {
+    unsigned long d_ino;
+    unsigned long d_off;
+    unsigned short d_reclen;
+    char d_name[1];
+    /*
+    char           pad;       // Zero padding byte
+    char           d_type;    // File type (only since Linux
+                              // 2.6.4); offset is (d_reclen - 1)
+    */
+  };
+
+  // TODO: so we need to convert the contents from buffer (i.e., a series of
+  // struct linux_dirent) structs into struct dirent and return to the user.
+#else
+#error                                                                         \
+    "SYS_getdents and SYS_getdents64 syscalls not available to perform a read operation."
+#endif
+
 #ifdef __unix__
   // The d_reclen field is available on Linux but not required by POSIX.
   readptr += d->d_reclen;
