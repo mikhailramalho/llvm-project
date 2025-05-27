@@ -87,6 +87,22 @@ static cl::opt<bool>
                                "be combined with a shift"),
                       cl::init(true));
 
+static cl::opt<int>
+    MaxStoresPerMemcpyCL("max-store-memcpy", cl::Hidden, cl::init(8),
+                         cl::desc("Max #stores to inline memcpy"));
+
+static cl::opt<int>
+    MaxStoresPerMemmoveCL("max-store-memmove", cl::Hidden, cl::init(8),
+                          cl::desc("Max #stores to inline memmove"));
+
+static cl::opt<int>
+    MaxStoresPerMemsetCL("max-store-memset", cl::Hidden, cl::init(8),
+                         cl::desc("Max #stores to inline memset"));
+
+static cl::opt<int>
+    MaxLoadsPerMemcmpCL("max-loads-memcpy", cl::Hidden, cl::init(8),
+                        cl::desc("Max #loads to inline memcpy"));
+
 RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                                          const RISCVSubtarget &STI)
     : TargetLowering(TM), Subtarget(STI) {
@@ -1625,19 +1641,19 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
   // when to convert selects into branches.
   PredictableSelectIsExpensive = Subtarget.predictableSelectIsExpensive();
 
-  MaxStoresPerMemsetOptSize = Subtarget.getMaxStoresPerMemset(/*OptSize=*/true);
-  MaxStoresPerMemset = Subtarget.getMaxStoresPerMemset(/*OptSize=*/false);
+  MaxStoresPerMemset = MaxStoresPerMemsetCL;
+  MaxStoresPerMemcpy = MaxStoresPerMemcpyCL;
+  MaxStoresPerMemmove = MaxStoresPerMemmoveCL;
+  MaxLoadsPerMemcmp = MaxLoadsPerMemcmpCL;
 
+  MaxStoresPerMemsetOptSize = Subtarget.getMaxStoresPerMemset(/*OptSize=*/true);
   MaxGluedStoresPerMemcpy = Subtarget.getMaxGluedStoresPerMemcpy();
   MaxStoresPerMemcpyOptSize = Subtarget.getMaxStoresPerMemcpy(/*OptSize=*/true);
-  MaxStoresPerMemcpy = Subtarget.getMaxStoresPerMemcpy(/*OptSize=*/false);
-
   MaxStoresPerMemmoveOptSize =
-      Subtarget.getMaxStoresPerMemmove(/*OptSize=*/true);
-  MaxStoresPerMemmove = Subtarget.getMaxStoresPerMemmove(/*OptSize=*/false);
-
+    Subtarget.getMaxStoresPerMemmove(/*OptSize=*/true);
   MaxLoadsPerMemcmpOptSize = Subtarget.getMaxLoadsPerMemcmp(/*OptSize=*/true);
-  MaxLoadsPerMemcmp = Subtarget.getMaxLoadsPerMemcmp(/*OptSize=*/false);
+
+
 }
 
 EVT RISCVTargetLowering::getSetCCResultType(const DataLayout &DL,
