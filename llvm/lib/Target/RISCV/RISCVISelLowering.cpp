@@ -88,19 +88,19 @@ static cl::opt<bool>
                       cl::init(true));
 
 static cl::opt<int>
-    MaxStoresPerMemcpyCL("max-store-memcpy", cl::Hidden, cl::init(8),
+    MaxStoresPerMemcpyCL("max-store-memcpy", cl::Hidden, cl::init(11),
                          cl::desc("Max #stores to inline memcpy"));
 
 static cl::opt<int>
-    MaxStoresPerMemmoveCL("max-store-memmove", cl::Hidden, cl::init(8),
+    MaxStoresPerMemmoveCL("max-store-memmove", cl::Hidden, cl::init(2),
                           cl::desc("Max #stores to inline memmove"));
 
 static cl::opt<int>
-    MaxStoresPerMemsetCL("max-store-memset", cl::Hidden, cl::init(8),
+    MaxStoresPerMemsetCL("max-store-memset", cl::Hidden, cl::init(2),
                          cl::desc("Max #stores to inline memset"));
 
 static cl::opt<int>
-    MaxLoadsPerMemcmpCL("max-loads-memcpy", cl::Hidden, cl::init(8),
+    MaxLoadsPerMemcmpCL("max-loads-memcpy", cl::Hidden, cl::init(9),
                         cl::desc("Max #loads to inline memcpy"));
 
 RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
