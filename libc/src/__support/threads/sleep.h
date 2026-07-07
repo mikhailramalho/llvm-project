@@ -27,8 +27,14 @@ LIBC_INLINE void sleep_briefly() {
   __builtin_arm_isb(0xf);
 #elif defined(LIBC_TARGET_ARCH_IS_AARCH64)
   asm volatile("isb\n" ::: "memory");
+#elif defined(LIBC_TARGET_ARCH_IS_ANY_RISCV) && defined(__riscv_zihintpause)
+  asm volatile("pause\n" ::: "memory");
 #else
-  // Simply do nothing if sleeping isn't supported on this platform.
+  // There is no pause/yield instruction on this platform, but this must
+  // still be a compiler barrier: a busy-wait loop calling sleep_briefly()
+  // would otherwise be an infinite loop without side effects, which is
+  // undefined behavior and is removed by the compiler.
+  asm volatile("" ::: "memory");
 #endif
 }
 
