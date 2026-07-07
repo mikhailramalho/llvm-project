@@ -15,6 +15,7 @@
 
 #include "include/llvm-libc-types/ucontext_t.h"
 
+#include "src/__support/macros/properties/architectures.h"
 #include "src/ucontext/getcontext.h"
 #include "src/ucontext/setcontext.h"
 
@@ -33,6 +34,8 @@ void basic_stub_test() {
 
   ASSERT_TRUE(true);
 }
+
+#if defined(LIBC_TARGET_ARCH_IS_X86_64)
 
 void register_preservation_test() {
   ucontext_t ctx;
@@ -173,10 +176,132 @@ void test_r8_r11() {
   ASSERT_EQ(checked_r11, (long)0x1111111111111111);
 }
 
+#elif defined(LIBC_TARGET_ARCH_IS_ANY_RISCV)
+
+// Unlike the x86_64 implementation, the RISC-V implementation only saves
+// the registers the psABI requires to survive a function call, so only
+// callee-saved registers are checked here. For the same reason, when
+// setcontext resumes through the getcontext call below, every caller-saved
+// register may hold the value it had at the point of the setcontext call,
+// so they must all appear in the clobber list.
+#ifdef __riscv_float_abi_double
+#define GETCONTEXT_CALL_CLOBBERS                                               \
+  "memory", "ra", "t0", "t1", "t2", "t3", "t4", "t5", "t6", "a1", "a2", "a3", \
+      "a4", "a5", "a6", "a7", "ft0", "ft1", "ft2", "ft3", "ft4", "ft5",       \
+      "ft6", "ft7", "ft8", "ft9", "ft10", "ft11", "fa0", "fa1", "fa2", "fa3", \
+      "fa4", "fa5", "fa6", "fa7"
+#else
+#define GETCONTEXT_CALL_CLOBBERS                                               \
+  "memory", "ra", "t0", "t1", "t2", "t3", "t4", "t5", "t6", "a1", "a2", "a3", \
+      "a4", "a5", "a6", "a7"
+#endif
+
+void register_preservation_test() {
+  ucontext_t ctx;
+  static volatile int jumped = 0;
+
+  long checked_s2, checked_s3, checked_s4, checked_s5;
+
+  {
+    register long s2_val asm("s2") = 0x12121212;
+    register long s3_val asm("s3") = 0x13131313;
+    register long s4_val asm("s4") = 0x14141414;
+    register long s5_val asm("s5") = 0x15151515;
+
+    register void *a0_val asm("a0") = &ctx;
+
+    asm volatile("jalr %[getcontext_ptr]"
+                 : "+r"(a0_val), "+r"(s2_val), "+r"(s3_val), "+r"(s4_val),
+                   "+r"(s5_val)
+                 : [getcontext_ptr] "r"((void *)LIBC_NAMESPACE::getcontext)
+                 : GETCONTEXT_CALL_CLOBBERS);
+
+    checked_s2 = s2_val;
+    checked_s3 = s3_val;
+    checked_s4 = s4_val;
+    checked_s5 = s5_val;
+  }
+
+  if (!jumped) {
+    jumped = 1;
+
+    // Modify registers to ensure they are restored from context
+    asm volatile("li s2, 0\n\t"
+                 "li s3, 0\n\t"
+                 "li s4, 0\n\t"
+                 "li s5, 0\n\t" ::
+                     : "s2", "s3", "s4", "s5");
+
+    register const ucontext_t *a0_set asm("a0") = &ctx;
+    asm volatile("jalr %[setcontext_ptr]" ::"r"(a0_set),
+                 [setcontext_ptr] "r"((void *)LIBC_NAMESPACE::setcontext)
+                 : "memory");
+
+    ASSERT_TRUE(false); // Should not reach here
+  }
+
+  ASSERT_EQ(checked_s2, (long)0x12121212);
+  ASSERT_EQ(checked_s3, (long)0x13131313);
+  ASSERT_EQ(checked_s4, (long)0x14141414);
+  ASSERT_EQ(checked_s5, (long)0x15151515);
+}
+
+#ifdef __riscv_float_abi_double
+void fp_register_preservation_test() {
+  ucontext_t ctx;
+  static volatile int jumped = 0;
+
+  double checked_fs2, checked_fs3;
+
+  {
+    register double fs2_val asm("fs2") = 2.5;
+    register double fs3_val asm("fs3") = 3.5;
+
+    register void *a0_val asm("a0") = &ctx;
+
+    asm volatile("jalr %[getcontext_ptr]"
+                 : "+r"(a0_val), "+f"(fs2_val), "+f"(fs3_val)
+                 : [getcontext_ptr] "r"((void *)LIBC_NAMESPACE::getcontext)
+                 : GETCONTEXT_CALL_CLOBBERS);
+
+    checked_fs2 = fs2_val;
+    checked_fs3 = fs3_val;
+  }
+
+  if (!jumped) {
+    jumped = 1;
+
+    // Zero the registers to ensure they are restored from context
+    asm volatile("fcvt.d.w fs2, zero\n\t"
+                 "fcvt.d.w fs3, zero\n\t" ::
+                     : "fs2", "fs3");
+
+    register const ucontext_t *a0_set asm("a0") = &ctx;
+    asm volatile("jalr %[setcontext_ptr]" ::"r"(a0_set),
+                 [setcontext_ptr] "r"((void *)LIBC_NAMESPACE::setcontext)
+                 : "memory");
+
+    ASSERT_TRUE(false); // Should not reach here
+  }
+
+  ASSERT_TRUE(checked_fs2 == 2.5);
+  ASSERT_TRUE(checked_fs3 == 3.5);
+}
+#endif // __riscv_float_abi_double
+
+#endif
+
 TEST_MAIN() {
   basic_stub_test();
+#if defined(LIBC_TARGET_ARCH_IS_X86_64)
   register_preservation_test();
   test_rbx_rdx();
   test_r8_r11();
+#elif defined(LIBC_TARGET_ARCH_IS_ANY_RISCV)
+  register_preservation_test();
+#ifdef __riscv_float_abi_double
+  fp_register_preservation_test();
+#endif
+#endif
   return 0;
 }

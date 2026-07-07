@@ -143,16 +143,17 @@ add_header(sigset_t HDR sigset_t.h DEPENDS libc.include.llvm-libc-macros.signal_
 set(mcontext_deps)
 set(ucontext_deps .sigset_t .stack_t)
 
-if(LIBC_TARGET_ARCHITECTURE STREQUAL "x86_64")
+if(LIBC_TARGET_ARCHITECTURE STREQUAL "x86_64" OR
+   LIBC_TARGET_ARCHITECTURE STREQUAL "riscv")
   add_header(
     mcontext_t_arch
     HDR
-      x86_64/mcontext_t.h
+      ${LIBC_TARGET_ARCHITECTURE}/mcontext_t.h
   )
   add_header(
     ucontext_t_arch
     HDR
-      x86_64/ucontext_t.h
+      ${LIBC_TARGET_ARCHITECTURE}/ucontext_t.h
     DEPENDS
       .mcontext_t_arch
       .sigset_t

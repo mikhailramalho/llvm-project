@@ -57,6 +57,7 @@ set(TARGET_PUBLIC_HEADERS
     libc.include.sys_syscall
     libc.include.sys_time
     libc.include.sys_types
+    libc.include.sys_ucontext
     libc.include.sys_uio
     libc.include.sys_utsname
     libc.include.sys_wait
@@ -66,6 +67,7 @@ set(TARGET_PUBLIC_HEADERS
     libc.include.threads
     libc.include.time
     libc.include.uchar
+    libc.include.ucontext
     libc.include.unistd
     libc.include.wchar
     libc.include.wctype
