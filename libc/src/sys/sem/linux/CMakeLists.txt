@@ -1,3 +1,13 @@
+add_header_library(
+  kernel_semid_ds
+  HDRS
+    kernel_semid_ds.h
+  DEPENDS
+    libc.hdr.types.struct_semid_ds
+    libc.src.__support.macros.config
+    libc.src.__support.macros.properties.architectures
+)
+
 add_entrypoint_object(
   semget
   SRCS
@@ -19,6 +29,7 @@ add_entrypoint_object(
   HDRS
     ../semctl.h
   DEPENDS
+    .kernel_semid_ds
     libc.hdr.errno_macros
     libc.hdr.sys_ipc_macros
     libc.hdr.sys_sem_macros
